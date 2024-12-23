@@ -1,0 +1,19 @@
+import pandas as pd  
+
+# Read the Excel file  
+input_file = "xx.xlsx"  # Input file name  
+output_file = "xx (deduplicated).xlsx"  # Output file name  
+
+# Read the Excel file into a DataFrame  
+df = pd.read_excel(input_file)  
+
+# Remove duplicates, keeping only the 'Targets' column  
+unique_targets = df['Targets'].drop_duplicates()  
+
+# Save the unique 'Targets' to a new DataFrame  
+result_df = pd.DataFrame(unique_targets, columns=['Targets'])  
+
+# Write the result to a new Excel file  
+result_df.to_excel(output_file, index=False)  
+
+print(f"The deduplicated 'Targets' have been saved to {output_file}")
