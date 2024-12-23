@@ -1,0 +1,54 @@
+import pandas as pd  
+
+# Input file paths  
+file_taoren = "xx GO (Overall).xlsx"  # Replace with the file path for "xx Total Bioinformation"  
+file_intersection = "Components-Targets (score).xlsx"  # Replace with the file path for "intersection_with_scores"  
+output_file = "Components-Targets GO Association.xlsx"  # Output file name  
+
+# Load Excel data  
+try:  
+    df_taoren = pd.read_excel(file_taoren)  #xx Total Bioinformation  
+    df_intersection = pd.read_excel(file_intersection)  # intersection_with_scores  
+except FileNotFoundError as e:  
+    print(f"File not found: {e}")  
+    exit()  
+
+# Extract the gene list from "intersection_with_scores"  
+intersection_genes = set(df_intersection["Gene"].dropna())  # Extract intersecting genes  
+
+# Define a function to count the number of matched genes  
+def count_matched_genes(gene_names_column):  
+    # Split the gene name string into a list  
+    gene_list = gene_names_column.split(";")  
+    # Count the number of matches with the intersecting genes  
+    matched_genes = [gene for gene in gene_list if gene in intersection_genes]  
+    # Return the count of matched genes and the matched genes  
+    return len(matched_genes), ";".join(matched_genes)  
+
+# Perform matching and statistics on the last column of "xx Total Bioinformation"  
+df_taoren["Matched Gene Count"], df_taoren["Matched Genes"] = zip(  
+    *df_taoren["cluster1-gene names"].apply(count_matched_genes)  
+)  
+
+# Group by "Description" and calculate the total matched genes for each description  
+description_stats = df_taoren.groupby("Description").agg(  
+    {  
+        "Matched Gene Count": "sum",  # Sum the matched gene counts  
+        "Matched Genes": lambda x: ";".join(x),  # Combine all matched genes  
+        "cluster1-Pvalue": "first",  # Keep the first value  
+        "cluster1-gene number": "first",  # Keep the first value  
+        "cluster1-EnrichRatio": "first",  # Keep the first value  
+        "cluster1-gene names": lambda x: ";".join(x),  # Combine all gene names  
+    }  
+).reset_index()  
+
+# Filter out rows where the total matched gene count is 0  
+description_stats = description_stats[description_stats["Matched Gene Count"] > 0]  
+
+# Sort by the total matched gene count in descending order  
+description_stats = description_stats.sort_values(by="Matched Gene Count", ascending=False)  
+
+# Output the results to an Excel file  
+description_stats.to_excel(output_file, index=False)  
+
+print(f"The statistical results have been saved to the file: {output_file}")
