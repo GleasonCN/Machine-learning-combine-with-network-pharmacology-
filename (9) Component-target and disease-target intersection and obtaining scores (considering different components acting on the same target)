@@ -1,0 +1,75 @@
+import pandas as pd  
+import matplotlib.pyplot as plt  
+from matplotlib_venn import venn2  
+
+# Input file paths  
+file1 = "xx (deduplicated).xlsx"  # First Excel file  
+file2 = "xx Targets.xlsx"  # Second Excel file  
+output_file = "Components-Targets (score).xlsx"  # Output file name  
+
+# Load Excel data  
+try:  
+    df1 = pd.read_excel(file1)  # First file  
+    df2 = pd.read_excel(file2)  # Second file  
+except FileNotFoundError as e:  
+    print(f"File not found: {e}")  
+    exit()  
+
+# Ensure the file format is correct  
+if df1.shape[1] < 1 or df2.shape[1] < 2:  
+    print("The first file must have at least one column, and the second file must have at least two columns!")  
+    exit()  
+
+# Get gene lists  
+genes1 = set(df1.iloc[:, 0].dropna())  # First column of the first file  
+genes2 = set(df2.iloc[:, 0].dropna())  # First column of the second file  
+
+# Get column names  
+file1_column_name = df1.columns[0]  
+file2_column_name = df2.columns[0]  
+
+# Find the intersection  
+intersection = genes1 & genes2  
+
+# Print the intersection results  
+print(f"Number of intersecting genes: {len(intersection)}")  
+print("Intersecting genes:", intersection)  
+
+# Extract intersecting genes and their corresponding scores from the second file  
+result = df2[df2.iloc[:, 0].isin(intersection)][[df2.columns[0], df2.columns[1]]]  
+result.columns = ["Gene", "Score"]  # Rename columns  
+
+# Save the results to an Excel file  
+result.to_excel(output_file, index=False)  
+print(f"Intersecting genes and their scores have been saved to the file: {output_file}")  
+
+# Get the top 10 genes and their scores  
+top10 = result.sort_values(by="Score", ascending=False).head(10)  
+
+# Plot the Venn diagram and bar chart  
+plt.figure(figsize=(14, 6))  
+
+# Subplot 1: Venn diagram  
+plt.subplot(1, 2, 1)  # Draw the Venn diagram on the left side of the canvas  
+venn = venn2([genes1, genes2], (file1_column_name, file2_column_name))  
+
+# Set font size and boldness for the Venn diagram  
+for label in venn.set_labels:  
+    label.set_fontsize(14)  # Font size for region names  
+    label.set_fontweight('bold')  # Bold region names  
+for label in venn.subset_labels:  
+    if label:  # Ensure the label exists  
+        label.set_fontsize(16)  # Font size for numbers  
+        label.set_fontweight('bold')  # Bold numbers  
+
+# Subplot 2: Bar chart  
+plt.subplot(1, 2, 2)  # Draw the bar chart on the right side of the canvas  
+plt.bar(top10["Gene"], top10["Score"], color='skyblue')  
+plt.xticks(rotation=0, fontsize=12, fontweight='bold')  # Horizontal labels, bold and larger font  
+plt.yticks(fontsize=12, fontweight='bold')  # Bold and larger font for y-axis  
+plt.xlabel(file2_column_name, fontsize=14, fontweight='bold')  # Bold and larger font for x-axis label  
+plt.ylabel("Score", fontsize=14, fontweight='bold')  # Bold and larger font for y-axis label  
+
+# Adjust layout and display the chart  
+plt.tight_layout()  
+plt.show()
