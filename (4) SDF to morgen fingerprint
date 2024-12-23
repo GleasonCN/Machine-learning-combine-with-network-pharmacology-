@@ -1,0 +1,44 @@
+from rdkit import Chem  
+from rdkit.Chem import AllChem  
+import pandas as pd  
+
+def sdf_to_excel(sdf_file, output_excel):  
+    # Read the SDF file  
+    suppl = Chem.SDMolSupplier(sdf_file)  
+
+    # Store compound names and Morgan fingerprints  
+    data = []  
+
+    for mol in suppl:  
+        if mol is None:  
+            continue  
+
+        # Get the compound name  
+        try:  
+            name = mol.GetProp("chembl_pref_name")  # Extract compound name  
+        except KeyError:  
+            name = "Unknown"  # If no name is found, set it to "Unknown"  
+
+        # Convert the name to title case (first letter uppercase, others lowercase)  
+        name = name.title()  
+
+        # Compute Morgan fingerprints (radius=2, 1024 bits)  
+        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=1024)  
+        # Convert the fingerprint to a list of bits  
+        fp_bits = list(fp)  
+
+        # Combine the compound name and Morgan fingerprint  
+        data.append([name] + fp_bits)  
+
+    # Create a DataFrame  
+    columns = ["Compound"] + [f"Bit_{i}" for i in range(1024)]  
+    df = pd.DataFrame(data, columns=columns)  
+
+    # Save the results to an Excel file  
+    df.to_excel(output_excel, index=False, engine='openpyxl')  
+    print(f"Data has been successfully saved to {output_excel}")  
+
+# Example usage  
+sdf_file = "xx.sdf"  # Path to the input SDF file  
+output_excel = "xx_database_positive_labels.xlsx"  # Path to the output Excel file  
+sdf_to_excel(sdf_file, output_excel)
