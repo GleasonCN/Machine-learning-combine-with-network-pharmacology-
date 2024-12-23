@@ -1,0 +1,57 @@
+import pandas as pd  
+
+# Input file paths  
+file_kegg = "xx KEGG (Overall).xlsx"  # Replace with the KEGG file path  
+file_intersection = "Components-Targets (score).xlsx"  # Replace with the "intersection_with_scores" file path  
+output_file = "Components-Targets KEGG Association.xlsx"  # Output file name  
+
+# Load Excel data  
+try:  
+    df_kegg = pd.read_excel(file_kegg)  # KEGG data  
+    df_intersection = pd.read_excel(file_intersection)  # intersection_with_scores  
+except FileNotFoundError as e:  
+    print(f"File not found: {e}")  
+    exit()  
+
+# Extract the gene list from "Components-Targets", standardize format (remove spaces and convert to uppercase)  
+intersection_genes = set(df_intersection["Gene"].dropna().str.strip().str.upper())  
+
+# Define a function to count the number of matched genes  
+def count_matched_genes(gene_names_column):  
+    # If the value is missing or not a string, return 0 and an empty string  
+    if not isinstance(gene_names_column, str):  
+        return 0, ""  
+    # Split the gene name string into a list and standardize format  
+    gene_list = [gene.strip().upper() for gene in gene_names_column.split(";") if gene.strip()]  
+    # Count the number of matches with the intersecting genes  
+    matched_genes = [gene for gene in gene_list if gene in intersection_genes]  
+    # Return the count of matched genes and the matched genes  
+    return len(matched_genes), ";".join(matched_genes)  
+
+# Perform matching and statistics on the gene column in the KEGG data  
+df_kegg["Matched Gene Count"], df_kegg["Matched Genes"] = zip(  
+    *df_kegg["gene names"].fillna("").apply(count_matched_genes)  
+)  
+
+# Group by "Term description" and calculate the total matched genes for each term  
+kegg_stats = df_kegg.groupby("Term description").agg(  
+    {  
+        "Matched Gene Count": "sum",  # Sum the matched gene counts  
+        "Matched Genes": lambda x: ";".join(x),  # Combine all matched genes  
+        "p-value": "first",  # Keep the first value  
+        "coverage": "first",  # Keep the first value  
+        "EnrichRatio": "first",  # Keep the first value  
+        "gene names": lambda x: ";".join(x),  # Combine all gene names  
+    }  
+).reset_index()  
+
+# Filter out rows where the total matched gene count is 0  
+kegg_stats = kegg_stats[kegg_stats["Matched Gene Count"] > 0]  
+
+# Sort by the total matched gene count in descending order  
+kegg_stats = kegg_stats.sort_values(by="Matched Gene Count", ascending=False)  
+
+# Output the results to an Excel file  
+kegg_stats.to_excel(output_file, index=False)  
+
+print(f"The statistical results have been saved to the file: {output_file}")
