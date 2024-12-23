@@ -1,0 +1,32 @@
+import pandas as pd  
+
+def process_file_and_convert_to_excel(txt_file_path, excel_file_path):  
+    # Read the content of the file  
+    with open(txt_file_path, 'r', encoding='utf-8') as file:  
+        lines = file.readlines()  
+
+    processed_data = []  
+    # Process each line of the file  
+    for line in lines:  
+        if line.strip() and not line.startswith('#'):  # Ignore empty lines and comment lines  
+            parts = line.strip().split('\t')  # Split fields by tab  
+            name = parts[0]  # 'Name' is the first field  
+
+            # Process 'Targets', remove CID and anything after it, keeping only the gene name  
+            targets = parts[2:]  # 'Targets' column starts from the 3rd field onward  
+            if targets:  
+                # Extract the gene name from each target  
+                target_genes = [target.split('|')[1].split('(')[0] for target in targets]  
+
+                # Create a row for each gene  
+                for gene in target_genes:  
+                    processed_data.append({'Compound': name, 'Targets': gene})  
+
+    # Convert the data to a DataFrame and save it as an Excel file  
+    df = pd.DataFrame(processed_data)  
+    df.to_excel(excel_file_path, index=False)  
+
+# Example usage  
+txt_file_path = 'xx_LC_MS.txt'  # Replace with the path to your text file  
+excel_file_path = 'xx_LC_MS.xlsx'  # Path to the output Excel file  
+process_file_and_convert_to_excel(txt_file_path, excel_file_path)
