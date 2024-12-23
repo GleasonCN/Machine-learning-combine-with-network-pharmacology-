@@ -1,0 +1,49 @@
+from rdkit import Chem  
+from rdkit.Chem import AllChem  
+import pandas as pd  
+
+def smiles_to_fingerprints(input_excel, output_excel, num_samples=1026):  
+    # Read the input Excel file  
+    df = pd.read_excel(input_excel)  
+
+    # Check if the required columns are present  
+    if "Compound" not in df.columns or "SMILES" not in df.columns:  
+        raise ValueError("The input Excel file must contain 'Compound' and 'SMILES' columns!")  
+
+    # Randomly select the target number of compounds  
+    sampled_df = df.sample(n=num_samples, random_state=42)  # Set random seed for reproducibility  
+
+    # Store the results  
+    data = []  
+
+    for index, row in sampled_df.iterrows():  
+        compound = row["Compound"]  
+        smiles = row["SMILES"]  
+
+        # Convert SMILES to a molecule object  
+        mol = Chem.MolFromSmiles(smiles)  
+        if mol is None:  
+            print(f"Warning: SMILES '{smiles}' could not be parsed. Skipping this entry.")  
+            continue  
+
+        # Compute Morgan fingerprints (radius=2, 1024 bits)  
+        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=1024)  
+        # Convert the fingerprint to a list of bits  
+        fp_bits = list(fp)  
+
+        # Combine the compound name and Morgan fingerprint  
+        data.append([compound] + fp_bits)  
+
+    # Create a DataFrame  
+    columns = ["Compound"] + [f"Bit_{i}" for i in range(1024)]  
+    result_df = pd.DataFrame(data, columns=columns)  
+
+    # Save the results to an Excel file  
+    result_df.to_excel(output_excel, index=False, engine='openpyxl')  
+    print(f"Data has been successfully saved to {output_excel}")  
+
+
+# Example usage  
+input_excel = "100,000 negatively labelled molecular.xlsx"  # Path to the input Excel file  
+output_excel = "negative_label_drug_fingerprints.xlsx"  # Path to the output Excel file  
+smiles_to_fingerprints(input_excel, output_excel)
